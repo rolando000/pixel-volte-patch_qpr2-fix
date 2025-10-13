@@ -180,7 +180,7 @@ class SubscriptionModer(
             this.overrideConfigDirectly(bundle)
         } else {
             cal.time = securityPatchDate
-            if (cal.get(Calendar.YEAR) > 2025 || (cal.get(Calendar.YEAR) == 2025 && cal.get(Calendar.MONTH) >= 10)) {
+            if (cal.get(Calendar.YEAR) > 2025 || (cal.get(Calendar.YEAR) == 2025 && cal.get(Calendar.MONTH) >= 9)) {
                 this.overrideConfigUsingBroker(bundle)
             } else {
                 this.overrideConfigDirectly(bundle)
