@@ -40,7 +40,6 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install required platform
-        # 修复：同时安装 34.0.0 以匹配后面的硬编码路径，防止报错
         run: sdkmanager "platforms;android-36" "build-tools;35.0.0" "build-tools;34.0.0"
 
       - name: Replace android.jar
@@ -65,38 +64,11 @@ jobs:
           RUN_ID: ${{ github.run_id }}
 
       - name: align APK with zipalign
-        # 这里原作者硬编码了 34.0.0，我们在上面安装步骤里补上了
         run: $ANDROID_SDK_ROOT/build-tools/34.0.0/zipalign -v -p 4 app/build/outputs/apk/${BUILD_TYPE}/${FILENAME} app-unsigned-aligned.apk
         env:
-          # 注意：Debug 模式下 gradle 输出文件夹通常是 debug 而不是 inputs.build-type 的值
-          # 这里做一个简单的容错，如果是 debug 就写 debug，否则用 inputs
           BUILD_TYPE: ${{ inputs.build-type == 'release' && 'release' || 'debug' }}
           FILENAME: ${{ steps.build_apk.outputs.build_filename }}
 
-      # 签名步骤：因为你没有原作者的密钥，这一步会自动跳过（或者生成未签名的包）
-      # 但对于 Patch 类应用，通常未签名也能通过 Root 安装，或者你可以自己用 MT管理器 签名
+      # 修正点：去掉了 ${{ }}，直接使用 secrets 判断
       - name: Save keystore as file
-        if: ${{ secrets.keystore != '' }}
-        run: echo "${KEYSTORE_B64}" | base64 -d > keystore.jks
-        env:
-          KEYSTORE_B64: ${{ secrets.keystore }}
-
-      - name: Sign APK
-        if: ${{ secrets.key-password != '' }}
-        run: echo "${KEY_PASSWORD}" | $ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner sign --ks keystore.jks --ks-key-alias "${KEY_ALIAS}" --key-pass "env:KEY_PASSWORD" --out dev.bluehouse.enablevolte.apk app-unsigned-aligned.apk
-        env:
-          KEY_ALIAS: ${{ secrets.key-alias }}
-          KEY_PASSWORD: ${{ secrets.key-password }}
-          BUILD_TYPE: ${{ inputs.build-type }}
-
-      # 如果没有签名（因为没有密钥），直接把对齐后的包重命名输出
-      - name: Rename APK (No Sign)
-        if: ${{ secrets.key-password == '' }}
-        run: mv app-unsigned-aligned.apk dev.bluehouse.enablevolte.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.build_apk.outputs.upload_filename }}
-          path: dev.bluehouse.enablevolte.apk
-          retention-days: 3
+        if: secrets.keystore != ''
